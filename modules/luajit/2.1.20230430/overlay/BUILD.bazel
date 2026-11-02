@@ -426,12 +426,16 @@ cc_library(
         ":macos_arm64": [
             "LUAJIT_OS=LUAJIT_OS_OSX",
             "LUAJIT_ENABLE_JIT",
+            "LUAJIT_UNWIND_EXTERNAL",
         ],
         "@platforms//os:linux": [
             "LUAJIT_OS=LUAJIT_OS_LINUX",
             "LUAJIT_UNWIND_EXTERNAL",
         ],
-        "@platforms//os:macos": ["LUAJIT_OS=LUAJIT_OS_OSX"],
+        "@platforms//os:macos": [
+            "LUAJIT_OS=LUAJIT_OS_OSX",
+            "LUAJIT_UNWIND_EXTERNAL",
+        ],
         "@platforms//os:windows": ["LUAJIT_OS=LUAJIT_OS_WINDOWS"],
         "//conditions:default": [],
     }),
