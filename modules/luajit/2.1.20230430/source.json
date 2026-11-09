@@ -1,0 +1,9 @@
+{
+    "url": "https://github.com/LuaJIT/LuaJIT/archive/224129a8e64bfa219d35cd03055bf03952f167f6.tar.gz",
+    "integrity": "sha256-qbzZ5kbisYjh1+P7WU4Exh3aOzMt/QN41BvhnB6unQk=",
+    "strip_prefix": "LuaJIT-224129a8e64bfa219d35cd03055bf03952f167f6",
+    "overlay": {
+        "BUILD.bazel": "sha256-Yd8FBImIT0mGmkOEUeFBuie9De1Un4sXayjjn1MULHQ=",
+        "buildvm.bzl": "sha256-ndHCSryy7CgbuJrZSDVSq4JmLok7k41OFJFmfwnn+Og="
+    }
+}
