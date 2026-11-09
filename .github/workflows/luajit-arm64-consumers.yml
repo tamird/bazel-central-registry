@@ -1,0 +1,23 @@
+name: Verify LuaJIT's ARM64 consumers
+on:
+  push:
+    branches: [qualification/luajit-linux-arm64-consumer]
+permissions:
+  contents: read
+jobs:
+  consumer:
+    if: github.repository == 'tamird/bazel-central-registry' && github.actor == github.repository_owner && github.event.created && !github.event.deleted && github.run_attempt == 1
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - run: python3 -IB .github/luajit_arm64_consumer.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        if: always() && !cancelled()
+        with:
+          name: luajit-linux-arm64
+          path: ${{ runner.temp }}/luajit-arm64-result.json
+          if-no-files-found: ignore
