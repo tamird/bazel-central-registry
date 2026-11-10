@@ -1,7 +1,7 @@
 name: Compare LuaJIT's PowerPC number modes
 on:
   push:
-    branches: [qualification/luajit-ppc-interpreter]
+    branches: [qualification/luajit-ppc-bfd-interpreter]
 permissions:
   contents: read
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-          fetch-depth: 3
+          fetch-depth: 4
       - name: Compare the configured VM headers and PowerPC interpreter
         run: python3 -IB .github/luajit_ppc_number_mode.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a

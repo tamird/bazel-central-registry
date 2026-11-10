@@ -26,7 +26,7 @@ def run(args, *, cwd=None, check=True):
     return p
 
 save()
-assert run(['git','rev-parse','HEAD~2']).stdout.strip() == fixed
+assert run(['git','rev-parse','HEAD~3']).stdout.strip() == fixed
 run(['git','fetch','--depth=1','https://github.com/tamird/bazel-central-registry.git',base])
 module_text = '''module(name="consumer")
 bazel_dep(name="luajit", version="2.1.1794214635")
@@ -108,7 +108,7 @@ with tempfile.TemporaryDirectory(dir=os.environ['RUNNER_TEMP']) as td:
     run(['sudo','ln','-s','/usr/bin/powerpc-linux-gnu-gcc',str(compiler)])
     run([str(compiler),'-B/usr/powerpc-linux-gnu/bin','-fuse-ld=bfd','-print-prog-name=ld.bfd'])
     for rev in (base,fixed):
-        flags=set_registry(rev)+['--platforms=//:ppc','--host_platform=//:ppc','--extra_toolchains=//:ppc_cc','--repo_env=CC='+str(compiler),'--repo_env=BAZEL_LINKOPTS=-fuse-ld=bfd','--host_linkopt=-fuse-ld=bfd','--linkopt=-fuse-ld=bfd','--repo_env=AR=/usr/bin/powerpc-linux-gnu-ar','--action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu','--host_action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu']
+        flags=set_registry(rev)+['--platforms=//:ppc','--host_platform=//:ppc','--nostart_end_lib','--features=-supports_start_end_lib','--host_features=-supports_start_end_lib','--extra_toolchains=//:ppc_cc','--repo_env=CC='+str(compiler),'--repo_env=BAZEL_LINKOPTS=-fuse-ld=bfd','--host_linkopt=-fuse-ld=bfd','--linkopt=-fuse-ld=bfd','--repo_env=AR=/usr/bin/powerpc-linux-gnu-ar','--action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu','--host_action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu']
         p=bz('build',flags,'//:numbers',check=False)
         rec=result['cases'].setdefault(rev,{});rec['runtimeBuild']={'code':p.returncode,'diagnostic':(p.stderr+p.stdout)[-6000:]};save()
         if p.returncode:continue
