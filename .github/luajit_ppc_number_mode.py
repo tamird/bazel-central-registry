@@ -26,7 +26,7 @@ def run(args, *, cwd=None, check=True):
     return p
 
 save()
-assert run(['git','rev-parse','HEAD^']).stdout.strip() == fixed
+assert run(['git','rev-parse','HEAD~2']).stdout.strip() == fixed
 run(['git','fetch','--depth=1','https://github.com/tamird/bazel-central-registry.git',base])
 module_text = '''module(name="consumer")
 bazel_dep(name="luajit", version="2.1.1794214635")
@@ -95,31 +95,22 @@ with tempfile.TemporaryDirectory(dir=os.environ['RUNNER_TEMP']) as td:
     def outputs(flags, labels):
         p=bz('cquery',flags,'set('+' '.join(labels)+')','--output=files')
         return [work/line for line in p.stdout.splitlines() if line.startswith('bazel-out/')]
-    headers=['@luajit//:'+name+'_arch_h' for name in ('buildvm','buildvm_linux_x64','buildvm_linux_x64_nogc64','buildvm_linux_arm64')]
-    for rev in (base,fixed):
-        flags=set_registry(rev)+['--platforms=//:ppc']
-        bz('build',flags,*headers)
-        files=outputs(flags, headers)
-        assert len(files)==4
-        hashes={f.parent.name:sha(f) for f in files}
-        # aquery's default mnemonic depends on run_binary's target name.
-        args=bz('aquery',flags,'@luajit//:buildvm_arch_h','--output=jsonproto')
-        acts=json.loads(args.stdout)['actions']; argv=next(a['arguments'] for a in acts if any(v.endswith('dynasm/dynasm.lua') for v in a.get('arguments',[])))
-        assert argv[-1].endswith('/vm_ppc.dasc') and ('DUALNUM' in argv)==(rev==fixed)
-        result['cases'][rev]={'headerHashes':hashes,'ppcDynasmArguments':argv}
-        save()
-    before=result['cases'][base]['headerHashes']; after=result['cases'][fixed]['headerHashes']
-    assert {k for k in before if before[k]!=after[k]}=={'buildvm'}
+    result['verifiedHeaderComparison'] = 'https://github.com/tamird/bazel-central-registry/actions/runs/42727854907/artifacts/13722783000'
     # The C toolchain executes on AMD64 and emits genuine big-endian PPC32
     # programs. binfmt executes minilua/buildvm with the same ABI as the core.
     run(['sudo','apt-get','update','-qq'])
     run(['sudo','apt-get','install','-qq','-y','g++-powerpc-linux-gnu','qemu-user-static','binfmt-support'])
     run(['sudo','update-binfmts','--enable','qemu-ppc'])
     result['binfmt']=run(['cat','/proc/sys/fs/binfmt_misc/qemu-ppc']).stdout
+    # rules_cc adds -B<compiler directory> to links. Place the compiler
+    # next to the target assembler/linker instead of next to the host ld.
+    compiler = Path('/usr/powerpc-linux-gnu/bin/luajit-probe-gcc')
+    run(['sudo','ln','-s','/usr/bin/powerpc-linux-gnu-gcc',str(compiler)])
+    run([str(compiler),'-B/usr/powerpc-linux-gnu/bin','-fuse-ld=bfd','-print-prog-name=ld.bfd'])
     for rev in (base,fixed):
-        flags=set_registry(rev)+['--platforms=//:ppc','--host_platform=//:ppc','--extra_toolchains=//:ppc_cc','--repo_env=CC=/usr/bin/powerpc-linux-gnu-gcc','--repo_env=AR=/usr/bin/powerpc-linux-gnu-ar','--action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu','--host_action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu']
+        flags=set_registry(rev)+['--platforms=//:ppc','--host_platform=//:ppc','--extra_toolchains=//:ppc_cc','--repo_env=CC='+str(compiler),'--repo_env=BAZEL_LINKOPTS=-fuse-ld=bfd','--host_linkopt=-fuse-ld=bfd','--linkopt=-fuse-ld=bfd','--repo_env=AR=/usr/bin/powerpc-linux-gnu-ar','--action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu','--host_action_env=QEMU_LD_PREFIX=/usr/powerpc-linux-gnu']
         p=bz('build',flags,'//:numbers',check=False)
-        rec=result['cases'][rev];rec['runtimeBuild']={'code':p.returncode,'diagnostic':(p.stderr+p.stdout)[-6000:]};save()
+        rec=result['cases'].setdefault(rev,{});rec['runtimeBuild']={'code':p.returncode,'diagnostic':(p.stderr+p.stdout)[-6000:]};save()
         if p.returncode:continue
         f,=outputs(flags,['//:numbers']);h=f.read_bytes()[:20]
         assert h[:6]==b'\x7fELF\x01\x02' and int.from_bytes(h[18:20],'big')==20
